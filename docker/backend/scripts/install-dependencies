@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -xe
+
+apt update
+
+# Install required packages and PHP
+apt install -y \
+    php \
+    php-gd \
+    php-intl \
+    php-opcache \
+    php-mysql \
+    php-mysqli \
+    php-mbstring \
+    php-imagick \
+    php-zip \
+    php-xml \
+    libjpeg-dev \
+    libwebp-dev \
+    libgd-dev \
+    php-curl \
+    curl
