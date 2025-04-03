@@ -4,9 +4,11 @@ set -xe
 
 apt update
 
-# Install required packages and PHP
+# Instalar pacotes necessários e PHP
 apt install -y \
     php \
+    php-cli \
+    php-fpm \
     php-gd \
     php-intl \
     php-opcache \
