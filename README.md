@@ -177,6 +177,19 @@ Este projeto é um sistema de gerenciamento de departamentos que permite listar,
 
 <br><br><br>
 
+![Captura de tela 2025-04-03 114925](https://github.com/user-attachments/assets/abfcc5c3-a239-4e33-9c79-7fa4af78ad01)
+
+![image](https://github.com/user-attachments/assets/544b53ac-6c3b-4d59-9582-023eafd4e978)
+
+![Captura de tela 2025-04-03 115352](https://github.com/user-attachments/assets/bd917a3c-0255-43e2-a1c5-7c206819dbf4)
+
+![image](https://github.com/user-attachments/assets/ff7831f9-a36c-4e74-a68e-e8459e7d2235)
+
+![image](https://github.com/user-attachments/assets/6e6770eb-ee28-4a32-8f6a-23bc9bb79e42)
+
+![image](https://github.com/user-attachments/assets/27c84618-cca5-496d-8aaa-7e4056167fd6)
+
+![image](https://github.com/user-attachments/assets/6cb861d8-89bb-4278-9576-3544201b2e81)
 
 
 
