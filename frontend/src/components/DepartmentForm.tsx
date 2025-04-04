@@ -21,19 +21,16 @@ const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, 
 
   useEffect(() => {
     if (editingDepartment) {
-      form.setFieldsValue(editingDepartment);
-      const selectedParent = departments.find(dept => dept.id === editingDepartment.parent_department_id);
-      if (selectedParent) {
-        setSecondaryDept(selectedParent);
-      }
+      form.setFieldsValue({
+        name: editingDepartment.name,
+        parent_department_id: editingDepartment.parent_department_id || undefined,
+      });
     } else {
       form.resetFields();
-      if (parentDepartment) {
-        form.setFieldsValue({ parent_department_id: parentDepartment.id });
-        setSecondaryDept(parentDepartment);
-      }
+      form.setFieldsValue({ parent_department_id: undefined }); 
     }
-  }, [editingDepartment, parentDepartment, form, departments]);
+  }, [editingDepartment, parentDepartment, form]);
+  
 
   const handleParentChange = (value: string) => {
     const selectedParent = departments.find(dept => dept.id === Number(value));
@@ -86,22 +83,30 @@ const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, 
 
         {departmentType !== "primary" && parentDepartment && (
           <Form.Item
-            name="parent_department_id"
-            label="Departamento Pai"
-            rules={[{ required: true, message: "O departamento pai é obrigatório!" }]}
+          name="parent_department_id"
+          label="Departamento Pai"
+          rules={[{ required: true, message: "O departamento pai é obrigatório!" }]}
+          initialValue={undefined} 
+        >
+          <Select
+            placeholder="Selecione um departamento"
+            allowClear
+            onChange={handleParentChange}
+            value={form.getFieldValue("parent_department_id") || undefined}
           >
-            <Select placeholder="Selecione um departamento" allowClear onChange={handleParentChange}>
-              {departments
-                .filter(dept => dept.id !== editingDepartment?.id)
-                .map(dept => (
-                  <Select.Option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </Select.Option>
-                ))}
-            </Select>
-          </Form.Item>
+            <Select.Option value={undefined} disabled>
+              Selecione um departamento
+            </Select.Option>
+            {departments
+              .filter(dept => dept.id !== editingDepartment?.id)
+              .map(dept => (
+                <Select.Option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </Select.Option>
+              ))}
+          </Select>
+        </Form.Item>
         )}
-
         <Form.Item>
           <Button type="primary" htmlType="submit" block loading={mutation.isPending}>
             {editingDepartment ? "Salvar Alterações" : "Criar Departamento"}

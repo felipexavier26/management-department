@@ -168,10 +168,10 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
       title: "Ações",
       key: "actions",
       render: (_: any, record: Department) => {
-        const hasParent = !!record.parent_department_id;
-
-        const isSecondary = hasParent;
-
+        console.log(`🔹 Registro Atual:`, record);
+    
+        const isSecondary = record.level === 1; 
+    
         return (
           <>
             <Button type="link" onClick={() => onEdit(record)}>
@@ -180,7 +180,7 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
             <Button type="link" danger onClick={() => handleDelete(record.id)}>
               Apagar
             </Button>
-
+    
             {isSecondary && (
               <Button
                 type="link"
@@ -196,6 +196,7 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
         );
       },
     }
+    
 
   ];
 
