@@ -1,6 +1,5 @@
 <?php
 
-// app/Http/Controllers/Api/DepartmentController.php
 namespace App\Http\Controllers\Api;
 
 use App\Models\Department;
@@ -32,34 +31,69 @@ class DepartmentController extends Controller
     public function store(Request $request)
     {
         try {
+            $request->merge([
+                'parent_department_id' => $request->input('parent_department_id', $request->input('parentId'))
+            ]);
+    
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'parent_department_id' => 'nullable|exists:departments,id',
+                'id' => 'nullable|exists:departments,id',
             ]);
-
+    
+            $department = null;
+    
+            if (!empty($validated['id'])) {
+                $department = Department::find($validated['id']);
+                if (!$department) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Departamento não encontrado para atualização.'
+                    ], 404);
+                }
+            }
+    
             $level = 0;
             if (!empty($validated['parent_department_id'])) {
                 $parent = Department::find($validated['parent_department_id']);
                 if ($parent) {
+                    if ($parent->level >= 3) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Não é possível criar um departamento além do nível 3.'
+                        ], 400);
+                    }
                     $level = $parent->level + 1;
                 }
             }
-
-            $department = Department::create([
-                'name' => $validated['name'],
-                'parent_department_id' => $validated['parent_department_id'] ?? null,
-                'level' => $level,
-            ]);
-
+    
+            if ($department) {
+                $department->update([
+                    'name' => $validated['name'],
+                    'parent_department_id' => $validated['parent_department_id'] ?? null,
+                    'level' => $level,
+                ]);
+    
+                $message = 'Departamento atualizado com sucesso!';
+            } else {
+                $department = Department::create([
+                    'name' => $validated['name'],
+                    'parent_department_id' => $validated['parent_department_id'] ?? null,
+                    'level' => $level,
+                ]);
+    
+                $message = 'Departamento criado com sucesso!';
+            }
+    
             return response()->json([
                 'success' => true,
-                'message' => 'Departamento criado com sucesso!',
+                'message' => $message,
                 'data' => $department
-            ], 201);
+            ], $department->wasRecentlyCreated ? 201 : 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao criar o departamento.',
+                'message' => 'Erro ao salvar o departamento.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -73,14 +107,15 @@ class DepartmentController extends Controller
                 'name' => 'required|string|max:255',
                 'parent_department_id' => 'nullable|exists:departments,id',
             ]);
-
+    
             $department = Department::findOrFail($id);
-
-            // Atualiza o nome e o departamento pai
+    
             $department->name = $validated['name'];
-            $department->parent_department_id = $validated['parent_department_id'] ?? null;
-
-            // Atualiza o nível do departamento
+    
+            if (array_key_exists('parent_department_id', $validated)) {
+                $department->parent_department_id = $validated['parent_department_id'];
+            }
+    
             $level = 0;
             if (!empty($validated['parent_department_id'])) {
                 $parent = Department::find($validated['parent_department_id']);
@@ -89,9 +124,9 @@ class DepartmentController extends Controller
                 }
             }
             $department->level = $level;
-
+    
             $department->save();
-
+    
             return response()->json([
                 'success' => true,
                 'message' => 'Departamento atualizado com sucesso!',
@@ -105,18 +140,17 @@ class DepartmentController extends Controller
             ], 500);
         }
     }
+    
 
     public function destroy($id)
     {
         try {
             $department = Department::findOrFail($id);
-    
-            // 🔥 Deleta todos os filhos primeiro
+
             $department->children()->delete();
-    
-            // 🔥 Agora pode deletar o departamento pai
+
             $department->delete();
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Departamento e subdepartamentos removidos com sucesso!'
@@ -129,5 +163,4 @@ class DepartmentController extends Controller
             ], 500);
         }
     }
-    
 }

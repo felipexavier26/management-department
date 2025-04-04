@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Form, Input, Modal, Select, Button } from "antd";
 import Swal from "sweetalert2";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,24 +9,46 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   editingDepartment: Department | null;
+  parentDepartment: Department | null;
   departments: Department[];
+  departmentType: string;
 }
 
-const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, departments }) => {
+const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, parentDepartment, departments, departmentType }) => {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+  const [secondaryDept, setSecondaryDept] = useState<Department | null>(null);
 
   useEffect(() => {
     if (editingDepartment) {
       form.setFieldsValue(editingDepartment);
+      const selectedParent = departments.find(dept => dept.id === editingDepartment.parent_department_id);
+      if (selectedParent) {
+        setSecondaryDept(selectedParent);
+      }
     } else {
       form.resetFields();
+      if (parentDepartment) {
+        form.setFieldsValue({ parent_department_id: parentDepartment.id });
+        setSecondaryDept(parentDepartment);
+      }
     }
-  }, [editingDepartment, form]);
+  }, [editingDepartment, parentDepartment, form, departments]);
+
+  const handleParentChange = (value: string) => {
+    const selectedParent = departments.find(dept => dept.id === Number(value));
+    setSecondaryDept(selectedParent || null);
+    form.setFieldsValue({ secondary_department_id: undefined });
+  };
 
   const mutation = useMutation({
-    mutationFn: async (data: Partial<Department>) => {
-      const validData = { ...data, name: data.name ?? "" };
+    mutationFn: async (data: Partial<Department & { secondary_department_id?: number }>) => {
+      const validData = {
+        name: data.name ?? "",
+        parent_department_id: data.parent_department_id || undefined,
+        secondary_department_id: data.secondary_department_id || undefined,
+      };
+
       return editingDepartment
         ? updateDepartment(editingDepartment.id, validData)
         : createDepartment(validData);
@@ -51,7 +73,7 @@ const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, 
     },
   });
 
-  const handleSubmit = (values: Partial<Department>) => {
+  const handleSubmit = (values: Partial<Department & { secondary_department_id?: number }>) => {
     mutation.mutate(values);
   };
 
@@ -62,10 +84,29 @@ const DepartmentForm: React.FC<Props> = ({ visible, onClose, editingDepartment, 
           <Input placeholder="Digite o nome do departamento" />
         </Form.Item>
 
+        {departmentType !== "primary" && parentDepartment && (
+          <Form.Item
+            name="parent_department_id"
+            label="Departamento Pai"
+            rules={[{ required: true, message: "O departamento pai é obrigatório!" }]}
+          >
+            <Select placeholder="Selecione um departamento" allowClear onChange={handleParentChange}>
+              {departments
+                .filter(dept => dept.id !== editingDepartment?.id)
+                .map(dept => (
+                  <Select.Option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </Select.Option>
+                ))}
+            </Select>
+          </Form.Item>
+        )}
 
-        <Button type="primary" htmlType="submit" loading={mutation.isPending} block>
-          {editingDepartment ? "Atualizar" : "Criar"}
-        </Button>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" block loading={mutation.isPending}>
+            {editingDepartment ? "Salvar Alterações" : "Criar Departamento"}
+          </Button>
+        </Form.Item>
       </Form>
     </Modal>
   );

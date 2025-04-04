@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
-import { Table, Button } from "antd";
+import { Table, Button, Modal, Input, Form } from "antd";
 import Swal from "sweetalert2";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteDepartment } from "../api/departmentApi";
+import { deleteDepartment, createDepartment } from "../api/departmentApi";
 import { Department } from "../../src/types";
 
 interface DepartmentWithChildren extends Department {
@@ -16,6 +16,10 @@ interface Props {
 
 const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
   const queryClient = useQueryClient();
+
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
+  const [newDepartmentName, setNewDepartmentName] = React.useState("");
+  const [selectedParentId, setSelectedParentId] = React.useState<number | null>(null);
 
   const mutation = useMutation({
     mutationFn: async (id: number) => {
@@ -40,7 +44,32 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
     },
   });
 
+  const createDepartmentMutation = useMutation({
+    mutationFn: async (newDept: { name: string; parentId: number | null }) => {
+      await createDepartment(newDept);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      Swal.fire({
+        icon: "success",
+        title: "Adicionado!",
+        text: "O departamento foi adicionado com sucesso.",
+        confirmButtonColor: "#1677ff",
+      });
+      setIsModalVisible(false);
+    },
+    onError: (error: any) => {
+      Swal.fire({
+        icon: "error",
+        title: "Erro!",
+        text: error.response?.data?.message || "Erro ao adicionar o departamento.",
+        confirmButtonColor: "#ff4d4f",
+      });
+    },
+  });
+
   const handleDelete = (id: number) => {
+    console.log("ID do departamento a ser apagado:", id);
     Swal.fire({
       title: "Tem certeza?",
       text: "Se confirmar, todos os subdepartamentos serão deletados. Essa ação não pode ser desfeita!",
@@ -57,22 +86,21 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
     });
   };
 
-  const departmentMap = useMemo(() => {
-    const flatList: Department[] = [];
-
-    const flattenTree = (list: Department[]) => {
-      list.forEach((dept) => {
-        flatList.push(dept);
-        if (dept.children && dept.children.length > 0) {
-          flattenTree(dept.children);
-        }
+  const handleAddDepartment = () => {
+    if (newDepartmentName.trim() !== "") {
+      createDepartmentMutation.mutate({
+        name: newDepartmentName,
+        parentId: selectedParentId,
       });
-    };
-
-    flattenTree(departments);
-
-    return new Map(flatList.map((dept) => [dept.id, dept]));
-  }, [departments]);
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "Aviso",
+        text: "O nome do departamento não pode ser vazio.",
+        confirmButtonColor: "#ff4d4f",
+      });
+    }
+  };
 
   const buildDepartmentTree = (
     departments: Department[],
@@ -88,6 +116,12 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
 
   const departmentTree = buildDepartmentTree(departments);
 
+  const departmentMap = useMemo(() => {
+    const map = new Map<number, Department>();
+    departments.forEach((dept) => map.set(dept.id, dept));
+    return map;
+  }, [departments]);
+
   const columns = [
     {
       title: "ID",
@@ -101,29 +135,68 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
       dataIndex: "name",
       key: "name",
     },
+
     {
-      title: "Departamento Pai",
+      title: "Departamento",
       dataIndex: "parent_department_id",
       key: "parent_department_id",
-      render: (parentId: number | null) => {
-        if (!parentId) {
-          return "N/D";
-        }
+      render: (parentId: number | null, record: Department) => {
+        console.log("🔹 Level Atual:", record.level);
+        console.log("🔹 Buscando parentId:", parentId);
+    
+        if (!parentId) return "N/D"; 
+    
         const parent = departmentMap.get(parentId);
-        return parent ? parent.name : "N/D";
+        console.log("🔹 Departamento Pai:", parent);
+    
+        if (!parent) return "N/D"; 
+    
+        if (record.level === 2) {
+          const secondaryDepartment = parent.parent_department_id
+            ? departmentMap.get(parent.parent_department_id)
+            : null;
+    
+          return secondaryDepartment ? secondaryDepartment.name : "N/D";
+        }
+    
+        return parent.name; 
       },
-    },
+    },     
+
+
     {
       title: "Ações",
       key: "actions",
-      render: (_: any, record: Department) => 
-        !record.parent_department_id ? ( 
+      render: (_: any, record: Department) => {
+        const hasParent = !!record.parent_department_id;
+
+        const isSecondary = hasParent;
+
+        return (
           <>
-            <Button type="link" onClick={() => onEdit(record)}>Editar</Button>
-            <Button type="link" danger onClick={() => handleDelete(record.id)}>Apagar</Button>
+            <Button type="link" onClick={() => onEdit(record)}>
+              Editar
+            </Button>
+            <Button type="link" danger onClick={() => handleDelete(record.id)}>
+              Apagar
+            </Button>
+
+            {isSecondary && (
+              <Button
+                type="link"
+                onClick={() => {
+                  setSelectedParentId(record.id);
+                  setIsModalVisible(true);
+                }}
+              >
+                Adicionar
+              </Button>
+            )}
           </>
-        ) : null,
-    },
+        );
+      },
+    }
+
   ];
 
   return (
@@ -147,6 +220,26 @@ const DepartmentTree: React.FC<Props> = ({ departments, onEdit }) => {
         pagination={{ pageSize: 10 }}
         bordered
       />
+
+      <Modal
+        title="Adicionar Subdepartamento"
+        visible={isModalVisible}
+        onOk={handleAddDepartment}
+        onCancel={() => setIsModalVisible(false)}
+        okText="Adicionar"
+        cancelText="Cancelar"
+      >
+        <Form layout="vertical">
+          <Form.Item label="Nome do Departamento" labelCol={{ span: 24 }} wrapperCol={{ span: 24 }}>
+            <Input
+              value={newDepartmentName}
+              onChange={(e) => setNewDepartmentName(e.target.value)}
+              placeholder="Digite o nome do departamento"
+            />
+          </Form.Item>
+        </Form>
+
+      </Modal>
     </div>
   );
 };

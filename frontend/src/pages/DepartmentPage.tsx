@@ -15,6 +15,8 @@ const DepartmentPage = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [parentDepartment, setParentDepartment] = useState<Department | null>(null);
+  const [departmentType, setDepartmentType] = useState<string>("");
 
   useEffect(() => {
     if (isError) {
@@ -27,13 +29,35 @@ const DepartmentPage = () => {
     }
   }, [isError]);
 
+  const openModal = (parentDepartment: Department | null, departmentType: string) => {
+    setEditingDepartment(null);
+    setParentDepartment(parentDepartment);
+    setModalVisible(true);
+    setDepartmentType(departmentType);
+  };
+
   return (
     <div style={{ marginTop: 30, marginLeft: "auto", marginRight: "auto", width: "1300px", textAlign: "center" }}>
-
       {!isLoading && (
-        <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
-          Novo Departamento
-        </Button>
+        <>
+          <Button
+            type="primary"
+            onClick={() => openModal(null, "primary")}
+            style={{ marginRight: 8 }}
+          >
+            Novo Departamento
+          </Button>
+
+          {departments.length > 0 && (
+            <Button
+              type="dashed"
+              onClick={() => openModal(departments[0], "secondary")}
+              style={{ marginRight: 8 }}
+            >
+              Criar Departamento Secundário
+            </Button>
+          )}
+        </>
       )}
 
       {isLoading ? (
@@ -49,9 +73,13 @@ const DepartmentPage = () => {
         onClose={() => {
           setModalVisible(false);
           setEditingDepartment(null);
+          setParentDepartment(null);
+          setDepartmentType("");
         }}
         editingDepartment={editingDepartment}
+        parentDepartment={parentDepartment}
         departments={departments}
+        departmentType={departmentType}
       />
     </div>
   );

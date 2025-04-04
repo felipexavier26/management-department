@@ -9,10 +9,20 @@ class Department extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'parent_department_id', 'level'];
+    protected $fillable = [
+        'name',
+        'parent_department_id',
+        'level'
+    ];
 
+ 
     public function children()
     {
-        return $this->hasMany(Department::class, 'parent_department_id')->with('children'); // Carrega recursivamente
+        return $this->hasMany(Department::class, 'parent_department_id')->with('children');
+    }
+
+    public function parent()
+    {
+        return $this->belongsTo(Department::class, 'parent_department_id');
     }
 }
